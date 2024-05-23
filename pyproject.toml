@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "sqlite-forge"
+version = "0.1.0"
+description = "Common tool for forging and maintaining sqlite databases"
+authors = ["Tom <tomrfreeman3@gmail.com>"]
+readme = "README.md"
+packages = [{include = "sqlite_forge"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.2.2"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.28.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
