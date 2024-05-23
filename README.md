@@ -14,13 +14,40 @@ SQLite Forge is a Python library designed to simplify and streamline operations 
 
 ## Installation
 
-To install SQLite Forge, you need to have Python installed on your system. SQLite Forge works best with Python 3.6 or higher (preferably 3.12 and higher).
-The repository can be added in a requirements.txt or a pyproject.toml file for a repository that will be using and imported as a package. Alternativly it can be cloned locally.
+SQLite Forge requires Python 3.12 or higher. Here are the steps to install and set up the library:
+
+1. **Direct Installation** (Add to your project):
+    - Add the following line to your `requirements.txt`:
+      ```
+      git+https://github.com/yourusername/sqlite-forge.git
+      ```
+    - Or, add it to your `pyproject.toml`:
+      ```
+      sqlite-forge = { git = "https://github.com/yourusername/sqlite-forge.git" }
+      ```
+
+2. **Local Development**:
+    - Clone the repository:
+      ```bash
+      git clone https://github.com/yourusername/sqlite-forge.git
+      cd sqlite-forge
+      ```
+
+    - Set up a virtual environment (optional but recommended):
+      ```bash
+      python -m venv venv
+      source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+      ```
+
+    - Install dependencies:
+      ```bash
+      pip install -r requirements.txt
+      ```
 
 ## Building Table Classes
 
-Table classes offer a form of data encapsulation and a pythonic way of interacting with a sqlite database.
-To create a new database, a table class will need to be built that will inherit the SqliteDatabase abstract class. An example is shown below:
+Create a new database by building a table class that inherits from `SqliteDatabase`. Here's an example:
+
 
 ```python
 from sqlite_forge.database import SqliteDatabase
