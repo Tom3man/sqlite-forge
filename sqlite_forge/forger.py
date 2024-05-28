@@ -2,7 +2,7 @@ import logging
 import os
 import sqlite3
 from abc import ABC
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ def sqlite3_process(func: Callable) -> Callable:
     def func_wrapper(self, *args, **kwargs):
 
         # Connect to the SQLite database
-        conn = sqlite3.connect(f"{self.database_path}/{self.DEFAULT_PATH}.db")
+        conn = sqlite3.connect(f"{self.database_path}/{self.db_name}.db")
         cursor = conn.cursor()
 
         # Execute the wrapped function
@@ -35,13 +35,16 @@ class BuildDatabase(ABC):
     DEFAULT_PATH: str = None
     DEFAULT_SCHEMA: Dict[str, str] = None
 
-    def __init__(self, database_path: str):
+    def __init__(self, database_path: str, db_name: Optional[str] = None):
         """
         Initialize the BuildDatabase class.
         """
         if not self.DEFAULT_PATH or not self.DEFAULT_SCHEMA:
             raise ValueError("Both DEFAULT_PATH and DEFAULT_SCHEMA must be implemented in the inheriting child class!")
-        self.db_name = self.DEFAULT_PATH
+        if db_name:
+            self.db_name = db_name
+        else:
+            self.db_name = self.DEFAULT_PATH
         self.database_path = database_path
 
     @property
@@ -49,7 +52,7 @@ class BuildDatabase(ABC):
         """
         Get the full path of the database file.
         """
-        db_path = f"{self.database_path}/{self.DEFAULT_PATH}.db"
+        db_path = f"{self.database_path}/{self.db_name}.db"
         if not os.path.exists(db_path):
             raise FileNotFoundError(
                 f"Database file '{db_path}' does not exist, please create first!")
