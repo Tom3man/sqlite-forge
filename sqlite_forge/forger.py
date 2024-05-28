@@ -35,14 +35,14 @@ class BuildDatabase(ABC):
     DEFAULT_PATH: str = None
     DEFAULT_SCHEMA: Dict[str, str] = None
 
-    def __init__(self, database_path: str, db_name: Optional[str] = None):
+    def __init__(self, database_path: str, database_name: Optional[str] = None):
         """
         Initialize the BuildDatabase class.
         """
         if not self.DEFAULT_PATH or not self.DEFAULT_SCHEMA:
             raise ValueError("Both DEFAULT_PATH and DEFAULT_SCHEMA must be implemented in the inheriting child class!")
-        if db_name:
-            self.db_name = db_name
+        if database_name:
+            self.db_name = database_name
         else:
             self.db_name = self.DEFAULT_PATH
         self.database_path = database_path
