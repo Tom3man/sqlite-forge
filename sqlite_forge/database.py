@@ -108,10 +108,13 @@ class SqliteDatabase(BuildDatabase, ABC):
 
     @sqlite3_process
     def ingest_dataframe(
-        self, cursor, df: pd.DataFrame, load_date: Optional[bool] = False
+        self, cursor, df: pd.DataFrame, load_date: Optional[bool] = False, overwrite: Optional[bool] = False
     ) -> None:
         """
-        Ingest a pandas dataframe into database.
+        Ingest a pandas dataframe into the database.
+
+        If load_date is True, adds a LOAD_DATE column with the current datetime.
+        If overwrite is True, updates existing records based on PRIMARY_KEY.
         """
 
         if load_date:
@@ -119,8 +122,48 @@ class SqliteDatabase(BuildDatabase, ABC):
 
         headers = df.columns.tolist()
         self._validate_headers(headers, self.DEFAULT_SCHEMA)
+
+        if self.PRIMARY_KEY:
+            # Pre-build the WHERE clause for existence check and update
+            where_clause = " AND ".join([f"{key} = ?" for key in self.PRIMARY_KEY])
+
         for index, row in df.iterrows():
-            insert_query = f"""
-                INSERT INTO {self.db_name} ({', '.join(headers)})
-                VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
-            cursor.execute(insert_query, tuple(row))
+
+            if self.PRIMARY_KEY:
+                where_values = tuple(row[key] for key in self.PRIMARY_KEY)
+
+                # Check if the record already exists
+                cursor.execute(f"SELECT COUNT(*) FROM {self.db_name} WHERE {where_clause}", where_values)
+                exists = cursor.fetchone()[0]
+
+                if exists and overwrite:
+                    # Record exists, update it
+                    update_clause = ", ".join([f"{header} = ?" for header in headers if header not in self.PRIMARY_KEY])
+                    update_values = tuple(row[header] for header in headers if header not in self.PRIMARY_KEY)
+                    update_query = f"""
+                        UPDATE {self.db_name}
+                        SET {update_clause}
+                        WHERE {where_clause}"""
+                    cursor.execute(update_query, update_values + where_values)
+                elif not exists:
+                    # Record does not exist, insert it
+                    insert_query = f"""
+                        INSERT INTO {self.db_name} ({', '.join(headers)})
+                        VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
+                    cursor.execute(insert_query, tuple(row))
+            else:
+                # No primary key provided, insert directly
+                insert_query = f"""
+                    INSERT INTO {self.db_name} ({', '.join(headers)})
+                    VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
+                cursor.execute(insert_query, tuple(row))
+
+    @property
+    @sqlite3_process
+    def table_length(self, cursor: sqlite3.Cursor) -> int:
+        """
+        Return the number of rows in the table.
+        """
+        cursor.execute(f"SELECT COUNT(*) FROM {self.db_name}")
+        length = cursor.fetchone()[0]
+        return length
