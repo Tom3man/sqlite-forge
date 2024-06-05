@@ -1,4 +1,3 @@
-import logging
 import sqlite3
 from abc import ABC
 from datetime import datetime
@@ -6,9 +5,8 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
+from sqlite_forge import log
 from sqlite_forge.forger import BuildDatabase, sqlite3_process
-
-log = logging.getLogger(__name__)
 
 
 class SqliteDatabase(BuildDatabase, ABC):
@@ -57,7 +55,9 @@ class SqliteDatabase(BuildDatabase, ABC):
                 return
 
         # Define individual columns with their data types
-        columns_definitions = [f'{column_name} {column_type}' for column_name, column_type in self.DEFAULT_SCHEMA.items()]
+        columns_definitions = [
+            f'{column_name} {column_type}' for column_name, column_type in self.DEFAULT_SCHEMA.items()
+        ]
 
         # Include primary key in the column definitions if specified
         if hasattr(self, 'PRIMARY_KEY') and self.PRIMARY_KEY:
@@ -127,7 +127,8 @@ class SqliteDatabase(BuildDatabase, ABC):
             # Pre-build the WHERE clause for existence check and update
             where_clause = " AND ".join([f"{key} = ?" for key in self.PRIMARY_KEY])
 
-        for index, row in df.iterrows():
+        insert_count = 0
+        for _, row in df.iterrows():
 
             if self.PRIMARY_KEY:
                 where_values = tuple(row[key] for key in self.PRIMARY_KEY)
@@ -145,18 +146,23 @@ class SqliteDatabase(BuildDatabase, ABC):
                         SET {update_clause}
                         WHERE {where_clause}"""
                     cursor.execute(update_query, update_values + where_values)
+                    insert_count += 1
                 elif not exists:
                     # Record does not exist, insert it
                     insert_query = f"""
                         INSERT INTO {self.db_name} ({', '.join(headers)})
                         VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
                     cursor.execute(insert_query, tuple(row))
+                    insert_count += 1
             else:
                 # No primary key provided, insert directly
                 insert_query = f"""
                     INSERT INTO {self.db_name} ({', '.join(headers)})
                     VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
                 cursor.execute(insert_query, tuple(row))
+                insert_count += 1
+
+        log.info(f"{insert_count} added to {self.DEFAULT_PATH} dataframe, new length: {self.table_length}")
 
     @property
     @sqlite3_process

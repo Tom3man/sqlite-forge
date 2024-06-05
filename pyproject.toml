@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sqlite-forge"
-version = "1.0.1"
+version = "1.0.2"
 description = "Common tool for forging and maintaining sqlite databases"
 authors = ["Tom <tomrfreeman3@gmail.com>"]
 readme = "README.md"
