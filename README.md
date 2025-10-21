@@ -1,116 +1,100 @@
 # SQLite Forge
 
-## Overview
+SQLite Forge is a lightweight toolkit that helps you declare and maintain SQLite tables from Python. Define your schema once, then manage tables, run queries, and ingest pandas `DataFrame` objects without repeating boilerplate code.
 
-SQLite Forge is a Python library designed to simplify and streamline operations on SQLite databases. It provides a robust API for creating, updating, and managing SQLite databases. Built on top of the lightweight and fast SQLite engine, this library adds additional functionality for managing database schemas, performing CRUD operations, and integrating with data analysis tools like pandas.
-
-## Features
-
-- **Easy Database Management**: Automate the creation, update, and deletion of SQLite databases.
-- **Data Ingestion**: Seamlessly import data from pandas DataFrames directly into your SQLite database.
-- **Schema Validation**: Ensures that the data conforms to the predefined database schema.
-- **Query Execution**: Execute SQL queries and retrieve results directly into pandas DataFrames for further analysis.
-- **Table Existence Check**: Quickly verify the existence of tables before performing operations to ensure stability and reliability.
+## Highlights
+- Declarative table definitions with schemas and optional multi-column primary keys.
+- Safe helpers to create or drop tables and to check existence.
+- DataFrame ingestion with optional incremental overwrites.
+- Convenience wrappers to execute SQL queries and receive pandas `DataFrame` results.
+- Minimal footprint with no ORM overhead.
 
 ## Installation
 
-SQLite Forge requires Python 3.12 or higher. Here are the steps to install and set up the library:
+SQLite Forge supports Python 3.10 and newer.
 
-1. **Direct Installation** (Add to your project):
-    - Add the following line to your `requirements.txt`:
-      ```
-      git+https://github.com/yourusername/sqlite-forge.git
-      ```
-    - Or, add it to your `pyproject.toml`:
-      ```
-      sqlite-forge = { git = "https://github.com/yourusername/sqlite-forge.git" }
-      ```
+### Using `pip`
 
-2. **Local Development**:
-    - Clone the repository:
-      ```bash
-      git clone https://github.com/yourusername/sqlite-forge.git
-      cd sqlite-forge
-      ```
+```bash
+pip install git+https://github.com/Tom3man/sqlite-forge.git
+```
 
-    - Set up a virtual environment (optional but recommended):
-      ```bash
-      python -m venv venv
-      source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-      ```
+### Using Poetry
 
-    - Install dependencies:
-      ```bash
-      pip install -r requirements.txt
-      ```
+```bash
+poetry add git+https://github.com/Tom3man/sqlite-forge.git
+```
 
-## Building Table Classes
+For local development you can clone the repository instead:
 
-Create a new database by building a table class that inherits from `SqliteDatabase`. Here's an example:
+```bash
+git clone https://github.com/Tom3man/sqlite-forge.git
+cd sqlite-forge
+poetry install
+```
 
+## Quick Start
+
+Create a table class by inheriting from `SqliteDatabase` and supplying a default name, schema, and optional primary key definition.
 
 ```python
-from sqlite_forge.database import SqliteDatabase
+from sqlite_forge import SqliteDatabase
 
 
-class ExampleDatabase(SqliteDatabase):
-
-    DEFAULT_PATH = "DATABASE_NAME"
-    PRIMARY_KEY = ["PRIMARY_KEY_1", "PRIMARY_KEY_2"]
+class ExampleTable(SqliteDatabase):
+    DEFAULT_PATH = "example_table"
+    PRIMARY_KEY = ("id",)
     DEFAULT_SCHEMA = {
-        "PRIMARY_KEY_1": "VARCHAR(4)",   
-        "PRIMARY_KEY_2": "VARCHAR(4)",
-        "COLUMN_X": "VARCHAR(50)",
-        "COLUMN_Y": "INT",
-        "COLUMN_Z": "DATE",
+        "id": "INTEGER",
+        "name": "TEXT",
+        "score": "REAL",
     }
 ```
 
-## Interactions
-
-Once a table class has been built, the database can be interacted with using several common interaction methods.
-
-To start interacting with the database via the table class, an instantiation must be made with the path to your database folder:
+Instantiate the table with a directory to store database files. You can then create tables, ingest dataframes, and run ad-hoc queries:
 
 ```python
-from my_table_classes import ExampleDatabase
+from pathlib import Path
+import pandas as pd
 
+db = ExampleTable(database_path=Path("./data"))
+db.create_table(overwrite=False)
 
-# Initialize your database settings
-db = ExampleDatabase(database_path="/path/to/your/database/directory")
-```
+df = pd.DataFrame(
+    [
+        {"id": 1, "name": "Alice", "score": 9.2},
+        {"id": 2, "name": "Bob", "score": 8.7},
+    ]
+)
 
-All example below will now utilise this instantiation.
-
-### Creating a New Database
-
-To create a new database from the defined table class:
-
-```python
-db.create_table(cursor)
+db.ingest_dataframe(df, overwrite=True)
+results = db.execute_query("SELECT name, score FROM example_table ORDER BY score DESC;")
+print(results)
 ```
 
 ### Dropping a Table
 
-To safely drop an existing table:
-
 ```python
-# Safely drop the table
-db.drop_table(cursor)
+db.drop_table()
 ```
 
-### Ingesting Data from DataFrame
-
-To ingest data from a pandas DataFrame:
+### Checking Table Length
 
 ```python
-import pandas as pd
-
-data = pd.DataFrame({
-    'column1': [1, 2, 3],
-    'column2': ['A', 'B', 'C']
-})
-
-db.ingest_dataframe(cursor, data)
+row_count = db.table_length
 ```
 
+## Development
+
+We use [Poetry](https://python-poetry.org/) for dependency management.
+
+```bash
+poetry install
+poetry run pytest
+```
+
+Formatting is not enforced, but running tools such as `ruff`, `black`, or `isort` locally is encouraged. See `CONTRIBUTING.md` for more details.
+
+## License
+
+This project is released under the MIT License. See `LICENSE` for more information.

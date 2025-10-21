@@ -1,7 +1,7 @@
 import sqlite3
 from abc import ABC
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import pandas as pd
 
@@ -21,11 +21,11 @@ class SqliteDatabase(BuildDatabase, ABC):
     DEFAULT_SCHEMA: Dict[str, str] = None
 
     # Optional primary key(s) for database
-    PRIMARY_KEY: Optional[List[str]] = None
+    PRIMARY_KEY: Optional[Sequence[str]] = None
 
     def __init__(self, *args, **kwargs):
         """
-        Initialize the SqliteDatabase class.
+        Initialise the SqliteDatabase class.
         """
         super().__init__(*args, **kwargs)
 
@@ -40,7 +40,7 @@ class SqliteDatabase(BuildDatabase, ABC):
         log.info(f"Dropped existing table {self.db_name}.")
 
     @sqlite3_process
-    def create_table(self, cursor: sqlite3.Cursor, overwrite: Optional[bool] = False) -> None:
+    def create_table(self, cursor: sqlite3.Cursor, overwrite: bool = False) -> None:
         """
         Create a table in the database with composite primary keys.
         """
@@ -60,7 +60,7 @@ class SqliteDatabase(BuildDatabase, ABC):
         ]
 
         # Include primary key in the column definitions if specified
-        if hasattr(self, 'PRIMARY_KEY') and self.PRIMARY_KEY:
+        if self.PRIMARY_KEY:
             primary_key_clause = f"PRIMARY KEY ({', '.join(self.PRIMARY_KEY)})"
             columns_definitions.append(primary_key_clause)
 
@@ -70,7 +70,14 @@ class SqliteDatabase(BuildDatabase, ABC):
         create_table_query = f'CREATE TABLE IF NOT EXISTS {self.db_name} ({columns_definitions_str})'
 
         cursor.execute(create_table_query)
-        log.info(f"Table {self.db_name} created successfully with composite primary keys.")
+        if self.PRIMARY_KEY:
+            log.info(
+                "Table %s created successfully with primary key(s): %s.",
+                self.db_name,
+                ", ".join(self.PRIMARY_KEY),
+            )
+        else:
+            log.info("Table %s created successfully.", self.db_name)
 
     @sqlite3_process
     def get_columns(self, cursor: sqlite3.Cursor) -> List[str]:
@@ -82,15 +89,13 @@ class SqliteDatabase(BuildDatabase, ABC):
         return [column_info[1] for column_info in columns_info]
 
     @sqlite3_process
-    def execute_query(
-        self, cursor: sqlite3.Cursor, query: str
-    ) -> pd.DataFrame:
+    def execute_query(self, cursor: sqlite3.Cursor, query: str) -> pd.DataFrame:
         """
         Execute a query and return results as a DataFrame.
         """
         cursor.execute(query)
         data = cursor.fetchall()
-        columns = [description[0] for description in cursor.description]
+        columns = [description[0] for description in cursor.description] if cursor.description else []
         return pd.DataFrame(data, columns=columns)
 
     @staticmethod
@@ -108,7 +113,11 @@ class SqliteDatabase(BuildDatabase, ABC):
 
     @sqlite3_process
     def ingest_dataframe(
-        self, cursor, df: pd.DataFrame, load_date: Optional[bool] = False, overwrite: Optional[bool] = False
+        self,
+        cursor: sqlite3.Cursor,
+        df: pd.DataFrame,
+        load_date: bool = False,
+        overwrite: bool = False,
     ) -> None:
         """
         Ingest a pandas dataframe into the database.
@@ -118,6 +127,7 @@ class SqliteDatabase(BuildDatabase, ABC):
         """
 
         if load_date:
+            df = df.copy()
             df['LOAD_DATE'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         headers = df.columns.tolist()
@@ -152,17 +162,17 @@ class SqliteDatabase(BuildDatabase, ABC):
                     insert_query = f"""
                         INSERT INTO {self.db_name} ({', '.join(headers)})
                         VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
-                    cursor.execute(insert_query, tuple(row))
+                    cursor.execute(insert_query, tuple(row[header] for header in headers))
                     insert_count += 1
             else:
                 # No primary key provided, insert directly
                 insert_query = f"""
                     INSERT INTO {self.db_name} ({', '.join(headers)})
                     VALUES ({', '.join(['?' for _ in range(len(headers))])})"""
-                cursor.execute(insert_query, tuple(row))
+                cursor.execute(insert_query, tuple(row[header] for header in headers))
                 insert_count += 1
 
-        log.info(f"{insert_count} added to {self.DEFAULT_PATH} dataframe, new length: {self.table_length}")
+        log.info("%s rows written to %s; table now has %s rows.", insert_count, self.db_name, self.table_length)
 
     @property
     @sqlite3_process

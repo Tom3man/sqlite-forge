@@ -1,29 +1,40 @@
 import logging
-import os
 import sqlite3
 from abc import ABC
-from typing import Callable, Dict, Optional
+from functools import wraps
+from pathlib import Path
+from typing import Callable, Dict, Optional, TypeVar, Union
 
 log = logging.getLogger(__name__)
 
+T = TypeVar("T")
+DatabasePath = Union[str, Path]
 
-def sqlite3_process(func: Callable) -> Callable:
+
+def sqlite3_process(func: Callable[..., T]) -> Callable[..., T]:
     """
     Decorator to manage SQLite database connection.
     """
-    def func_wrapper(self, *args, **kwargs):
+    @wraps(func)
+    def func_wrapper(self, *args, **kwargs) -> T:
+        database_dir = Path(self.database_path)
+        database_dir.mkdir(parents=True, exist_ok=True)
+        db_file = database_dir / f"{self.db_name}.db"
 
-        # Connect to the SQLite database
-        conn = sqlite3.connect(f"{self.database_path}/{self.db_name}.db")
-        cursor = conn.cursor()
+        conn = sqlite3.connect(str(db_file))
+        try:
+            cursor = conn.cursor()
+            result = func(self, cursor, *args, **kwargs)
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+        else:
+            conn.commit()
+            return result
+        finally:
+            conn.close()
 
-        # Execute the wrapped function
-        output = func(self, cursor, *args, **kwargs)
-
-        # Commit changes and close the connection
-        conn.commit()
-        conn.close()
-        return output
     return func_wrapper
 
 
@@ -32,31 +43,28 @@ class BuildDatabase(ABC):
     Abstract base class for building a SQLite database.
     """
 
-    DEFAULT_PATH: str = None
-    DEFAULT_SCHEMA: Dict[str, str] = None
+    DEFAULT_PATH: Optional[str] = None
+    DEFAULT_SCHEMA: Optional[Dict[str, str]] = None
 
-    def __init__(self, database_path: str, database_name: Optional[str] = None):
+    def __init__(self, database_path: DatabasePath, database_name: Optional[str] = None) -> None:
         """
         Initialize the BuildDatabase class.
         """
         if not self.DEFAULT_PATH or not self.DEFAULT_SCHEMA:
             raise ValueError("Both DEFAULT_PATH and DEFAULT_SCHEMA must be implemented in the inheriting child class!")
-        if database_name:
-            self.db_name = database_name
-        else:
-            self.db_name = self.DEFAULT_PATH
-        self.database_path = database_path
+        self.db_name = database_name or self.DEFAULT_PATH
+        self.database_path = Path(database_path).expanduser()
 
     @property
     def database(self) -> str:
         """
         Get the full path of the database file.
         """
-        db_path = f"{self.database_path}/{self.db_name}.db"
-        if not os.path.exists(db_path):
+        db_path = self.database_path / f"{self.db_name}.db"
+        if not db_path.exists():
             raise FileNotFoundError(
                 f"Database file '{db_path}' does not exist, please create first!")
-        return db_path
+        return str(db_path)
 
     @property
     def conn(self) -> sqlite3.Connection:

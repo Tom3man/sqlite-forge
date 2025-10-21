@@ -4,7 +4,18 @@ version = "1.0.2"
 description = "Common tool for forging and maintaining sqlite databases"
 authors = ["Tom <tomrfreeman3@gmail.com>"]
 readme = "README.md"
+license = "MIT"
 packages = [{include = "sqlite_forge"}]
+keywords = ["sqlite", "database", "etl", "data-ingestion"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -13,6 +24,7 @@ pandas = "^2.2.2"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.28.0"
+pytest = "^7.4.0"
 
 [build-system]
 requires = ["poetry-core"]

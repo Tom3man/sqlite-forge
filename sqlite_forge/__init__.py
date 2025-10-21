@@ -1,18 +1,35 @@
 import logging
-import os
+from pathlib import Path
 
-MODULE_PATH = os.path.dirname(os.path.realpath(__file__))
-REPO_PATH = os.path.dirname(MODULE_PATH)
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:  # pragma: no cover - Python < 3.8 compatibility
+    PackageNotFoundError = None  # type: ignore
+    version = None  # type: ignore
 
-DATABASE_PATH = f"{REPO_PATH}"
+MODULE_PATH = Path(__file__).resolve().parent
+REPO_PATH = MODULE_PATH.parent
+DATABASE_PATH = str(REPO_PATH)
 
+log = logging.getLogger("sqlite_forge")
+log.addHandler(logging.NullHandler())
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+if version and PackageNotFoundError:
+    try:
+        __version__ = version("sqlite-forge")
+    except PackageNotFoundError:
+        __version__ = "0.0.0"
+else:
+    __version__ = "0.0.0"
 
+from .database import SqliteDatabase
+from .forger import BuildDatabase, sqlite3_process
 
-# Get the root logger
-log = logging.getLogger()
+__all__ = [
+    "BuildDatabase",
+    "SqliteDatabase",
+    "sqlite3_process",
+    "log",
+    "DATABASE_PATH",
+    "__version__",
+]
