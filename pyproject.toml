@@ -1,13 +1,17 @@
 [tool.poetry]
 name = "sqlite-forge"
-version = "1.0.2"
+version = "1.1.0"
 description = "Common tool for forging and maintaining sqlite databases"
 authors = ["Tom <tomrfreeman3@gmail.com>"]
 readme = "README.md"
 license = "MIT"
+homepage = "https://github.com/Tom3man/sqlite-forge"
+repository = "https://github.com/Tom3man/sqlite-forge"
+documentation = "https://tom3man.github.io/sqlite-forge/"
 packages = [{include = "sqlite_forge"}]
 keywords = ["sqlite", "database", "etl", "data-ingestion"]
 classifiers = [
+    "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
@@ -17,15 +21,43 @@ classifiers = [
     "Topic :: Database",
 ]
 
+[tool.poetry.urls]
+Issues = "https://github.com/Tom3man/sqlite-forge/issues"
+
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<4.0"
 pandas = "^2.2.2"
 
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.28.0"
 pytest = "^7.4.0"
+pytest-cov = "^6.0.0"
+ruff = "^0.9.7"
+mypy = "^1.15.0"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.1"
+mkdocs-material = "^9.6.20"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=sqlite_forge --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+ignore_missing_imports = true
+files = ["sqlite_forge"]

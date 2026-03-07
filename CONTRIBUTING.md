@@ -1,32 +1,24 @@
 # Contributing to SQLite Forge
 
-Thanks for your interest in improving SQLite Forge! This document outlines a short checklist to help you get started quickly.
+Thanks for your interest in improving SQLite Forge.
 
-## Getting Started
+## Setup
 
-- Fork the repository and create a feature branch from `main`.
-- Install dependencies with [Poetry](https://python-poetry.org/):
-  ```bash
-  poetry install
-  ```
-- Activate the virtual environment when developing locally:
-  ```bash
-  poetry shell
-  ```
+```bash
+poetry install --with dev --with docs
+```
 
-## Development Workflow
+## Local Quality Checks
 
-- Add tests for any new behaviour or bug fix. Place unit tests under `tests/`.
-- Keep code style consistent. We recommend running `ruff` or `black`/`isort` if you have them installed locally, although the project does not currently enforce a specific formatter.
-- Run the test suite before opening a pull request:
-  ```bash
-  poetry run pytest
-  ```
+```bash
+poetry run ruff check .
+poetry run mypy
+poetry run pytest
+poetry run mkdocs build --strict
+```
 
 ## Pull Request Checklist
 
-- Describe the change clearly and link to any relevant issues.
-- Ensure CI checks pass (linting, tests, and packaging checks when available).
-- Update documentation (including the README) when you add or modify behaviour.
-
-By following these guidelines we can keep SQLite Forge stable and welcoming for contributors. Thanks again for helping out!
+- Add or update tests for behaviour changes.
+- Update `README.md` and `docs/` for user-facing changes.
+- Add a changelog entry in `CHANGELOG.md` for release-impacting work.

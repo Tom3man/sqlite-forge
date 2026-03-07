@@ -1,0 +1,25 @@
+site_name: SQLite Forge
+site_description: Documentation for sqlite-forge
+site_url: https://tom3man.github.io/sqlite-forge/
+repo_url: https://github.com/Tom3man/sqlite-forge
+repo_name: Tom3man/sqlite-forge
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Overview: api.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true

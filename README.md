@@ -1,43 +1,36 @@
 # SQLite Forge
 
-SQLite Forge is a lightweight toolkit that helps you declare and maintain SQLite tables from Python. Define your schema once, then manage tables, run queries, and ingest pandas `DataFrame` objects without repeating boilerplate code.
+SQLite Forge is a lightweight toolkit that helps you declare and maintain SQLite tables from Python. Define your schema once, then manage tables, run queries, ingest pandas `DataFrame` objects, and export results.
 
 ## Highlights
-- Declarative table definitions with schemas and optional multi-column primary keys.
-- Safe helpers to create or drop tables and to check existence.
-- DataFrame ingestion with optional incremental overwrites.
-- Convenience wrappers to execute SQL queries and receive pandas `DataFrame` results.
-- Minimal footprint with no ORM overhead.
+
+- Declarative table definitions with schemas and optional multi-column primary keys
+- Safe helpers to create/drop tables and check existence
+- DataFrame ingestion with optional incremental overwrite support
+- Query execution that returns pandas `DataFrame` objects
+- Table export helpers for `csv`, `json`, and `parquet`
 
 ## Installation
 
-SQLite Forge supports Python 3.10 and newer.
-
-### Using `pip`
-
 ```bash
-pip install git+https://github.com/Tom3man/sqlite-forge.git
+pip install sqlite-forge
 ```
 
-### Using Poetry
-
-```bash
-poetry add git+https://github.com/Tom3man/sqlite-forge.git
-```
-
-For local development you can clone the repository instead:
+For development:
 
 ```bash
 git clone https://github.com/Tom3man/sqlite-forge.git
 cd sqlite-forge
-poetry install
+poetry install --with dev --with docs
 ```
 
 ## Quick Start
 
-Create a table class by inheriting from `SqliteDatabase` and supplying a default name, schema, and optional primary key definition.
-
 ```python
+from pathlib import Path
+
+import pandas as pd
+
 from sqlite_forge import SqliteDatabase
 
 
@@ -49,52 +42,56 @@ class ExampleTable(SqliteDatabase):
         "name": "TEXT",
         "score": "REAL",
     }
-```
 
-Instantiate the table with a directory to store database files. You can then create tables, ingest dataframes, and run ad-hoc queries:
-
-```python
-from pathlib import Path
-import pandas as pd
 
 db = ExampleTable(database_path=Path("./data"))
-db.create_table(overwrite=False)
+db.create_table(overwrite=True)
 
-df = pd.DataFrame(
-    [
-        {"id": 1, "name": "Alice", "score": 9.2},
-        {"id": 2, "name": "Bob", "score": 8.7},
-    ]
+db.ingest_dataframe(
+    pd.DataFrame(
+        [
+            {"id": 1, "name": "Alice", "score": 9.2},
+            {"id": 2, "name": "Bob", "score": 8.7},
+        ]
+    )
 )
 
-db.ingest_dataframe(df, overwrite=True)
-results = db.execute_query("SELECT name, score FROM example_table ORDER BY score DESC;")
-print(results)
-```
-
-### Dropping a Table
-
-```python
-db.drop_table()
-```
-
-### Checking Table Length
-
-```python
-row_count = db.table_length
+print(db.fetch_table())
+db.export_table("./data/example_table.csv", format="csv")
 ```
 
 ## Development
 
-We use [Poetry](https://python-poetry.org/) for dependency management.
-
 ```bash
-poetry install
 poetry run pytest
+poetry run ruff check .
+poetry run mypy
+poetry build
 ```
 
-Formatting is not enforced, but running tools such as `ruff`, `black`, or `isort` locally is encouraged. See `CONTRIBUTING.md` for more details.
+## Documentation
 
-## License
+- Docs site: https://tom3man.github.io/sqlite-forge/
+- Build locally:
 
-This project is released under the MIT License. See `LICENSE` for more information.
+```bash
+poetry run mkdocs serve
+```
+
+## Release
+
+1. Bump version in `pyproject.toml`.
+2. Update `CHANGELOG.md`.
+3. Publish:
+
+```bash
+poetry publish --build
+```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

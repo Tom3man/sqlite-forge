@@ -1,7 +1,8 @@
 import sqlite3
 from abc import ABC
 from datetime import datetime
-from typing import Dict, List, Optional, Sequence
+from pathlib import Path
+from typing import Dict, List, Literal, Optional, Sequence, Union
 
 import pandas as pd
 
@@ -15,10 +16,10 @@ class SqliteDatabase(BuildDatabase, ABC):
     """
 
     # Table name for database
-    DEFAULT_PATH: str = None
+    DEFAULT_PATH: Optional[str] = None
 
     # Schema dictionary for database
-    DEFAULT_SCHEMA: Dict[str, str] = None
+    DEFAULT_SCHEMA: Optional[Dict[str, str]] = None
 
     # Optional primary key(s) for database
     PRIMARY_KEY: Optional[Sequence[str]] = None
@@ -53,6 +54,9 @@ class SqliteDatabase(BuildDatabase, ABC):
                 # Log and return if the table exists and overwrite is False
                 log.info(f"Table {self.db_name} already exists and will not be overwritten.")
                 return
+
+        if self.DEFAULT_SCHEMA is None:
+            raise ValueError("DEFAULT_SCHEMA must be set before creating a table.")
 
         # Define individual columns with their data types
         columns_definitions = [
@@ -130,6 +134,9 @@ class SqliteDatabase(BuildDatabase, ABC):
             df = df.copy()
             df['LOAD_DATE'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        if self.DEFAULT_SCHEMA is None:
+            raise ValueError("DEFAULT_SCHEMA must be set before ingesting a dataframe.")
+
         headers = df.columns.tolist()
         self._validate_headers(headers, self.DEFAULT_SCHEMA)
 
@@ -183,3 +190,47 @@ class SqliteDatabase(BuildDatabase, ABC):
         cursor.execute(f"SELECT COUNT(*) FROM {self.db_name}")
         length = cursor.fetchone()[0]
         return length
+
+    def fetch_table(self, limit: Optional[int] = None) -> pd.DataFrame:
+        """
+        Return rows from the managed table as a DataFrame.
+        """
+        query = f"SELECT * FROM {self.db_name}"
+        if limit is not None:
+            query += f" LIMIT {int(limit)}"
+        return self.execute_query(query)
+
+    def export_table(
+        self,
+        output_path: Union[str, Path],
+        format: Literal["csv", "json", "parquet"] = "csv",
+        limit: Optional[int] = None,
+    ) -> Path:
+        """
+        Export table rows to a file.
+
+        Args:
+            output_path: Destination file path.
+            format: Export format ("csv", "json", or "parquet").
+            limit: Optional row limit before exporting.
+        """
+        df = self.fetch_table(limit=limit)
+        path = Path(output_path).expanduser()
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if format == "csv":
+            df.to_csv(path, index=False)
+        elif format == "json":
+            df.to_json(path, orient="records", indent=2)
+        elif format == "parquet":
+            try:
+                df.to_parquet(path, index=False)
+            except ImportError as exc:
+                raise ImportError(
+                    "Parquet export requires an engine such as 'pyarrow' or 'fastparquet'."
+                ) from exc
+        else:
+            raise ValueError("format must be one of: csv, json, parquet")
+
+        log.info("Exported %s rows from %s to %s", len(df), self.db_name, path)
+        return path

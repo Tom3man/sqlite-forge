@@ -64,3 +64,33 @@ def test_ingest_dataframe_with_invalid_headers(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         table.ingest_dataframe(bad_df)
+
+
+def test_fetch_table_with_limit(tmp_path: Path) -> None:
+    table = SampleTable(database_path=tmp_path)
+    table.create_table(overwrite=True)
+
+    df = pd.DataFrame(
+        [
+            {"id": 1, "name": "Alice", "score": 9.2},
+            {"id": 2, "name": "Bob", "score": 8.7},
+            {"id": 3, "name": "Cara", "score": 7.9},
+        ]
+    )
+    table.ingest_dataframe(df)
+
+    limited = table.fetch_table(limit=2)
+    assert len(limited) == 2
+
+
+def test_export_table_csv_and_json(tmp_path: Path) -> None:
+    table = SampleTable(database_path=tmp_path)
+    table.create_table(overwrite=True)
+    table.ingest_dataframe(pd.DataFrame([{"id": 1, "name": "Alice", "score": 9.2}]))
+
+    csv_path = table.export_table(tmp_path / "out" / "table.csv", format="csv")
+    json_path = table.export_table(tmp_path / "out" / "table.json", format="json")
+
+    assert csv_path.exists()
+    assert json_path.exists()
+    assert csv_path.read_text(encoding="utf-8").startswith("id,name,score")
